@@ -1,0 +1,19 @@
+fun buscarDocumentos(numeroSerie: String) {
+        Log.d("Firebase", "Consulta iniciada para $numeroSerie")
+
+        db.collection("documentos")
+            .whereEqualTo("numeroSerie", numeroSerie)
+            .get()
+            .addOnSuccessListener { result ->
+                Log.d("Firebase", "Consulta bem-sucedida: ${result.size()} documentos encontrados")
+
+                val lista = result.map { doc ->
+                    doc.toObject(Documento::class.java)
+                }
+                _documentos.postValue(lista)
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Erro na consulta", e)
+                _documentos.postValue(emptyList())
+            }
+    }
