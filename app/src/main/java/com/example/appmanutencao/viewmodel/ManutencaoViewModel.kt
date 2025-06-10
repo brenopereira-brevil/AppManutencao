@@ -1,74 +1,178 @@
 package com.example.appmanutencao.viewmodel
 
-import android.app.Application
-import android.util.Log
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.appmanutencao.data.AppDatabase
-import com.example.appmanutencao.data.Manutencao
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+import androidx.lifecycle.ViewModel
+//import com.example.appmanutencao.data.Documento
+import com.example.appmanutencao.model.Documento
+import com.example.appmanutencao.model.Manutencao // Importe o modelo atualizado
 import com.google.firebase.firestore.FirebaseFirestore
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import com.example.appmanutencao.data.Documento
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
+class ManutencaoViewModel : ViewModel() {
 
-
-class ManutencaoViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val dao = AppDatabase.getDatabase(application).manutencaoDao()
     private val db = FirebaseFirestore.getInstance()
-    private val _modelo3DUrl = MutableLiveData<String>()
-    private val _documentos = MutableLiveData<List<Documento>>()
-    val modelo3DUrl: LiveData<String> = _modelo3DUrl
-    val documentos: LiveData<List<Documento>> = _documentos
 
-    val manutencoes = dao.buscarTodas()
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Lazily,
-            emptyList()
-        )
+    // StateFlow para expor a lista de manutenções para a UI.
+    // A UI irá "observar" este fluxo e se atualizar automaticamente.
+    private val _historicoState = MutableStateFlow<List<Manutencao>>(emptyList())
+    val historicoState = _historicoState.asStateFlow()
 
-    fun inserir(manutencao: Manutencao) {
-        viewModelScope.launch {
-            dao.inserir(manutencao)
+    // StateFlow para expor uma única manutenção (usado na tela de detalhes/edição)
+    private val _manutencaoSelecionada = MutableStateFlow<Manutencao?>(null)
+    val manutencaoSelecionada = _manutencaoSelecionada.asStateFlow()
+
+    private val _navigateTo3D = MutableStateFlow<Result<String>?>(null)
+    val navigateTo3D = _navigateTo3D.asStateFlow()
+
+    private val _documentosState = MutableStateFlow<List<Documento>>(emptyList())
+    val documentosState = _documentosState.asStateFlow()
+
+    /**
+     * Inicia um "ouvinte" em tempo real para o histórico de manutenções
+     * de um equipamento específico.
+     */
+    fun carregarHistorico(numeroSerie: String) {
+        if (numeroSerie.isBlank()) return
+
+        val historicoRef = db.collection("equipamentos")
+            .document(numeroSerie)
+            .collection("historico_manutencoes")
+            .orderBy("data", Query.Direction.DESCENDING) // Mais novos primeiro
+
+        historicoRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                // Idealmente, trate o erro aqui (ex: expondo um estado de erro para a UI)
+                println("Erro ao carregar histórico: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                // Converte os documentos do Firestore para uma lista de objetos Manutencao
+                _historicoState.value = snapshot.toObjects(Manutencao::class.java)
+            }
         }
     }
 
+    /**
+     * Carrega os dados de UMA manutenção específica para a tela de detalhes/edição.
+     */
+    fun carregarManutencaoPorId(numeroSerie: String, manutencaoId: String) {
+        if (numeroSerie.isBlank() || manutencaoId.isBlank()) return
 
-    fun buscarDocumentos(numeroSerie: String) {
-        db.collection("documentos")
-            .whereEqualTo("numeroSerie", numeroSerie)
+        db.collection("equipamentos").document(numeroSerie)
+            .collection("historico_manutencoes").document(manutencaoId)
             .get()
-            .addOnSuccessListener { result ->
-                val lista = result.map { doc ->
-                    doc.toObject(Documento::class.java)
-                }
-                _documentos.postValue(lista)
+            .addOnSuccessListener { document ->
+                _manutencaoSelecionada.value = document.toObject(Manutencao::class.java)
             }
-            .addOnFailureListener { e ->
-                Log.e("Firebase", "Erro ao buscar documentos", e)
-                _documentos.postValue(emptyList())
+            .addOnFailureListener {
+                _manutencaoSelecionada.value = null
             }
     }
 
-    fun buscarModelo3D(numeroSerie: String) {
+    /**
+     * Salva uma nova manutenção ou atualiza uma existente.
+     */
+    fun salvarManutencao(
+        numeroSerie: String,
+        manutencao: Manutencao,
+        onComplete: (Boolean) -> Unit
+    ) {
+        if (numeroSerie.isBlank()) {
+            onComplete(false)
+            return
+        }
+
+        val historicoRef = db.collection("equipamentos")
+            .document(numeroSerie)
+            .collection("historico_manutencoes")
+
+        // Se a manutenção já tem um ID, é uma edição. Se não, é uma adição.
+        val task = if (manutencao.id.isNullOrBlank()) {
+            // ADIÇÃO: Cria um novo documento
+            historicoRef.add(manutencao)
+        } else {
+            // EDIÇÃO: Atualiza o documento existente
+            historicoRef.document(manutencao.id).set(manutencao)
+        }
+
+        task.addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener {
+                it.printStackTrace()
+                onComplete(false)
+            }
+    }
+
+    /**
+     * Exclui uma manutenção do Firestore.
+     */
+    fun excluirManutencao(
+        numeroSerie: String,
+        manutencaoId: String,
+        onComplete: (Boolean) -> Unit
+    ) {
+        if (numeroSerie.isBlank() || manutencaoId.isBlank()) {
+            onComplete(false)
+            return
+        }
+
+        db.collection("equipamentos").document(numeroSerie)
+            .collection("historico_manutencoes").document(manutencaoId)
+            .delete()
+            .addOnSuccessListener { onComplete(true) }
+            .addOnFailureListener { onComplete(false) }
+    }
+
+    fun onBotao3dClicado(numeroSerie: String) {
+        if (numeroSerie.isBlank()) {
+            _navigateTo3D.value = Result.failure(Exception("Número de série inválido."))
+            return
+        }
+
+        val db = FirebaseFirestore.getInstance()
         db.collection("modelos3D")
             .whereEqualTo("numeroSerie", numeroSerie)
+            .limit(1)
             .get()
-            .addOnSuccessListener { result ->
-                val url = result.firstOrNull()?.getString("url") ?: ""
-                _modelo3DUrl.postValue(url)
-
+            .addOnSuccessListener { querySnapshot ->
+                if (querySnapshot != null && !querySnapshot.isEmpty) {
+                    val document = querySnapshot.documents[0]
+                    val url = document.getString("url")
+                    if (!url.isNullOrBlank()) {
+                        // SUCESSO: Atualiza o StateFlow com a URL
+                        _navigateTo3D.value = Result.success(url)
+                    } else {
+                        _navigateTo3D.value = Result.failure(Exception("O campo 'url' está vazio no banco de dados."))
+                    }
+                } else {
+                    _navigateTo3D.value = Result.failure(Exception("Nenhum modelo 3D encontrado para o número de série: $numeroSerie"))
+                }
             }
-            .addOnFailureListener { e ->
-                Log.e("Firebase", "Erro ao buscar modelo 3D", e)
-                _modelo3DUrl.postValue("")
+            .addOnFailureListener { exception ->
+                _navigateTo3D.value = Result.failure(exception)
             }
     }
 
+    fun onNavegacao3DCompleta() {
+        _navigateTo3D.value = null
+    }
+
+    fun carregarDocumentos(numeroSerie: String) {
+        if (numeroSerie.isBlank()) return
+
+        db.collection("equipamentos")
+            .document(numeroSerie)
+            .collection("documentos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    println("Erro ao carregar documentos: ${error.message}")
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    _documentosState.value = snapshot.toObjects(Documento::class.java)
+                }
+            }
+    }
 
 }

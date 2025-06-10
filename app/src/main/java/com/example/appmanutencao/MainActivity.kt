@@ -41,11 +41,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigator() {
     val navController = rememberNavController()
-    val viewModel: ManutencaoViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    // --- CORREÇÃO 1: ViewModels instanciados de forma limpa, sem duplicatas ---
     val authViewModel: AuthViewModel = viewModel()
     val manutencaoViewModel: ManutencaoViewModel = viewModel()
-
-
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
@@ -54,7 +52,6 @@ fun AppNavigator() {
                 onLoginSuccess = { navController.navigate("home") }
             )
         }
-
 
         composable("home") {
             HomeScreen(
@@ -69,25 +66,35 @@ fun AppNavigator() {
 
         composable("cadastro") {
             CadastroScreen(
-                onNavigateBack = { navController.popBackStack() },
-                viewModel = viewModel
+                viewModel = manutencaoViewModel,
+                authViewModel = authViewModel, // Adicionar este
+                onNavigateBack = { navController.popBackStack() }
             )
         }
+
         composable("historico") {
             HistoricoScreen(
-                viewModel = viewModel,
-                onNavigateToDetail = { id ->
-                    navController.navigate("detalhes/$id")
+                viewModel = manutencaoViewModel,
+                authViewModel = authViewModel, // Adicionar este
+                onNavigateToDetail = { manutencaoId ->
+                    // Navega para a tela de detalhes passando o ID da manutenção
+                    navController.navigate("detalhes/$manutencaoId")
+                },
+                onNavigateToCadastro = {
+                    navController.navigate("cadastro")
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-        composable("detalhes/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull()
-            if (id != null) {
+
+        composable("detalhes/{manutencaoId}") { backStackEntry ->
+            // O nome do argumento deve ser o mesmo que na rota ("manutencaoId")
+            val manutencaoId = backStackEntry.arguments?.getString("manutencaoId")
+            if (manutencaoId != null) {
                 DetailScreen(
-                    manutencaoId = id,
-                    viewModel = viewModel,
+                    manutencaoId = manutencaoId,
+                    viewModel = manutencaoViewModel,
+                    authViewModel = authViewModel, // Adicionar este
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
@@ -104,43 +111,33 @@ fun AppNavigator() {
             )
         }
 
-
         composable("pdfViewer/{pdfUrl}") { backStackEntry ->
             val pdfUrl = backStackEntry.arguments?.getString("pdfUrl") ?: ""
             PdfViewerScreen(
-                pdfUrl = pdfUrl,
+                pdfUrl = Uri.decode(pdfUrl), // Decodificar a URL aqui é uma boa prática
                 onNavigateBack = { navController.popBackStack() }
             )
         }
 
-        composable("model3D") {
-            val modelUrl by manutencaoViewModel.modelo3DUrl.observeAsState("")
+        // --- CORREÇÃO 3: Rota 3D agora espera a URL como argumento ---
+        composable("model3D/{modelUrl}") { backStackEntry ->
+            // Extrai o argumento da URL que foi codificado e passado na rota
+            val encodedUrl = backStackEntry.arguments?.getString("modelUrl") ?: ""
+            // Decodifica a URL para o formato original, tratando caracteres especiais
+            val modelUrl = Uri.decode(encodedUrl)
 
-            if (modelUrl.isNotEmpty()) {
-                Model3DViewerScreen(
-                    modelUrl = modelUrl,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-
-            } else {
-                Text("Carregando modelo 3D...")
-            }
-        }
-
-        composable("model3DWebView") {
-            val modelUrl by manutencaoViewModel.modelo3DUrl.observeAsState("")
-
+            // Apenas mostra a tela se a URL for válida
             if (modelUrl.isNotEmpty()) {
                 Model3DViewerScreen(
                     modelUrl = modelUrl,
                     onNavigateBack = { navController.popBackStack() }
                 )
             } else {
-                Text("Carregando modelo 3D...")
+                // Se a URL não for passada, mostra um erro.
+                Text("Erro: URL do modelo 3D não foi fornecida.")
             }
         }
 
-
-
+        // --- CORREÇÃO 2: Rota "model3DWebView" duplicada foi removida ---
     }
 }

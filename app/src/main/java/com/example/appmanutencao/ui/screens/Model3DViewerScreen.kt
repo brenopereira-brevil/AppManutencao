@@ -1,70 +1,62 @@
+// Em ui/screens/Model3DViewerScreen.kt
+
 package com.example.appmanutencao.ui.screens
 
-import android.util.Log
-import android.webkit.ConsoleMessage
+import android.annotation.SuppressLint
+import android.view.ViewGroup
 import android.webkit.WebChromeClient
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
+
+// Este é o Composable que será chamado pelo seu NavHost
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun Model3DViewerScreen(
     modelUrl: String,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit // Embora não usado aqui, é bom para consistência
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    // AndroidView é a ponte entre o mundo Compose e o mundo das Views XML
+    AndroidView(
+        factory = { context ->
+            // A 'factory' cria a View uma única vez
+            WebView(context).apply {
+                // Aplica todas as configurações avançadas necessárias para o WebGL funcionar
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.databaseEnabled = true
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                settings.javaScriptCanOpenWindowsAutomatically = true
 
-        AndroidView(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            factory = { context ->
-                WebView(context).apply {
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        allowFileAccess = true
-                        useWideViewPort = true
-                        loadWithOverviewMode = true
-                        cacheMode = WebSettings.LOAD_DEFAULT
-                        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                // WebChromeClient lida com eventos do "navegador" como alertas e console logs
+                webChromeClient = WebChromeClient()
+
+                // WebViewClient lida com a navegação (cliques em links, etc.)
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                        // Impede que cliques dentro do viewer abram o navegador externo
+                        view?.loadUrl(url!!)
+                        return true
                     }
-
-                    webViewClient = WebViewClient()
-
-                    webChromeClient = object : WebChromeClient() {
-                        override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
-                            consoleMessage?.let {
-                                Log.d(
-                                    "WebViewConsole",
-                                    "${it.message()} -- From line ${it.lineNumber()} of ${it.sourceId()}"
-                                )
-                            }
-                            return super.onConsoleMessage(consoleMessage)
-                        }
-                    }
-
-                    setLayerType(WebView.LAYER_TYPE_HARDWARE, null)
-
-                    loadUrl(modelUrl)
                 }
-            }
-        )
 
-        Button(
-            onClick = onNavigateBack,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text("Voltar")
+                // Garante que a WebView seja destruída corretamente para evitar vazamento de memória
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+
+                // Finalmente, carrega a URL do modelo
+                loadUrl(modelUrl)
+            }
+        },
+        // O bloco 'update' é chamado sempre que o Composable é recomposto
+        update = { webView ->
+            // Se a URL pudesse mudar dinamicamente, nós a carregaríamos aqui.
+            // No nosso caso, a factory já carrega a URL inicial.
         }
-    }
+    )
 }

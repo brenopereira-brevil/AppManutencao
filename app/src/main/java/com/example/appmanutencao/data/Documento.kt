@@ -1,7 +1,10 @@
-package com.example.appmanutencao.data
+package com.example.appmanutencao.model
+
+import com.google.firebase.firestore.DocumentId
 
 data class Documento(
-    val numeroSerie: String = "",
-    val nome: String = "",
+    @DocumentId
+    val id: String? = null,
+    val descricao: String = "",
     val url: String = ""
 )

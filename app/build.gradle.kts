@@ -70,7 +70,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
-
+    implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     testImplementation(libs.junit)

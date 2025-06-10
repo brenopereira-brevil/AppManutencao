@@ -1,86 +1,94 @@
 package com.example.appmanutencao.ui.screens
 
-import android.content.Intent
 import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.appmanutencao.model.Documento
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel
 
-
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DocumentosScreen(
     viewModel: ManutencaoViewModel,
     authViewModel: AuthViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToPdf: (String) -> Unit
+    onNavigateToPdf: (pdfUrl: String) -> Unit
 ) {
-    //var numeroSerie by remember { mutableStateOf("") }
-    val documentos by viewModel.documentos.observeAsState(emptyList())
-    val context = LocalContext.current
+    val documentos by viewModel.documentosState.collectAsState()
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
 
     LaunchedEffect(numeroSerie) {
-        numeroSerie?.let {
-            viewModel.buscarDocumentos(it)
+        numeroSerie?.let { ns ->
+            if (ns.isNotBlank()) {
+                viewModel.carregarDocumentos(ns)
+            }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Documentos - Nº Série: $numeroSerie",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LazyColumn {
-            items(documentos) { doc ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clickable { onNavigateToPdf(doc.url) }
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = doc.nome,
-                            style = MaterialTheme.typography.titleMedium
-                        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Documentos do Equipamento") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
                     }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (documentos.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Nenhum documento encontrado.")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(documentos) { documento ->
+                    DocumentoItem(documento = documento, onNavigateToPdf = onNavigateToPdf)
                 }
             }
         }
+    }
+}
 
-        if (documentos.isEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Nenhum documento encontrado.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
+@Composable
+fun DocumentoItem(documento: Documento, onNavigateToPdf: (pdfUrl: String) -> Unit) {
+    if (documento.url.isBlank()) return
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onNavigateBack, modifier = Modifier.fillMaxWidth()) {
-            Text("Voltar")
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onNavigateToPdf(documento.url) },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = MaterialTheme.colorScheme.primary)
+            Text(documento.descricao, style = MaterialTheme.typography.bodyLarge)
         }
     }
-
 }
