@@ -12,24 +12,30 @@ fun PdfViewerScreen(
     pdfUrl: String,
     onNavigateBack: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        AndroidView(
-            factory = { context ->
-                WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    // Usa o Google Docs Viewer para exibir o PDF dentro do WebView
-                    loadUrl(pdfUrl)
-                }
-            },
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        )
-        Button(
-            onClick = onNavigateBack,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Voltar")
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        // Usa o Google Docs Viewer para exibir o PDF dentro do WebView
+                        loadUrl(pdfUrl)
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            )
+            Button(
+                onClick = onNavigateBack,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Voltar")
+            }
         }
     }
 }

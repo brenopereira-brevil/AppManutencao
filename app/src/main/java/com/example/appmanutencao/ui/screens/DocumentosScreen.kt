@@ -29,43 +29,48 @@ fun DocumentosScreen(
     val documentos by viewModel.documentosState.collectAsState()
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
 
-    LaunchedEffect(numeroSerie) {
-        numeroSerie?.let { ns ->
-            if (ns.isNotBlank()) {
-                viewModel.carregarDocumentos(ns)
-            }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Documentos do Equipamento") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        LaunchedEffect(numeroSerie) {
+            numeroSerie?.let { ns ->
+                if (ns.isNotBlank()) {
+                    viewModel.carregarDocumentos(ns)
                 }
-            )
-        }
-    ) { paddingValues ->
-        if (documentos.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Nenhum documento encontrado.")
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(documentos) { documento ->
-                    DocumentoItem(documento = documento, onNavigateToPdf = onNavigateToPdf)
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Documentos do Equipamento") },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            if (documentos.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Nenhum documento encontrado.")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(documentos) { documento ->
+                        DocumentoItem(documento = documento, onNavigateToPdf = onNavigateToPdf)
+                    }
                 }
             }
         }

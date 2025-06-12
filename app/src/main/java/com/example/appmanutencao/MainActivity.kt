@@ -22,6 +22,7 @@ import com.example.appmanutencao.ui.theme.AppManutencaoTheme
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.appmanutencao.ui.screens.ClpViewerScreen
 import com.example.appmanutencao.ui.screens.Model3DViewerScreen
 
 
@@ -58,6 +59,7 @@ fun AppNavigator() {
                 onNavigateToCadastro = { navController.navigate("cadastro") },
                 onNavigateToHistorico = { navController.navigate("historico") },
                 onNavigateToDocumentos = { navController.navigate("documentos") },
+                onNavigateToClp = { navController.navigate("clp_viewer") },
                 authViewModel = authViewModel,
                 manutencaoViewModel = manutencaoViewModel,
                 navController = navController
@@ -138,6 +140,10 @@ fun AppNavigator() {
             }
         }
 
-        // --- CORREÇÃO 2: Rota "model3DWebView" duplicada foi removida ---
+        composable("clp_viewer") {
+            ClpViewerScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
