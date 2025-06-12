@@ -4,37 +4,29 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.appmanutencao.model.Manutencao
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+// A tela agora não tem mais Scaffold e recebe o NavController principal
 @Composable
 fun HistoricoScreen(
     viewModel: ManutencaoViewModel,
     authViewModel: AuthViewModel,
-    onNavigateToDetail: (manutencaoId: String) -> Unit,
-    onNavigateToCadastro: () -> Unit,
-    onNavigateBack: () -> Unit
+    mainNavController: NavController
 ) {
-    // Observa o StateFlow do ViewModel. Sempre que a lista no ViewModel mudar,
-    // esta variável será atualizada, recompondo a tela.
     val historico by viewModel.historicoState.collectAsState()
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
 
-    // LaunchedEffect garante que o código dentro dele seja executado apenas uma vez
-    // quando a tela é criada (ou quando o numeroSerie mudar).
     LaunchedEffect(numeroSerie) {
         numeroSerie?.let { ns ->
             if (ns.isNotBlank()) {
@@ -43,40 +35,23 @@ fun HistoricoScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Histórico de Manutenções") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToCadastro) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Manutenção")
-            }
+    // O conteúdo agora é renderizado diretamente, sem Scaffold
+    if (historico.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Nenhuma manutenção encontrada.")
         }
-    ) { paddingValues ->
-        if (historico.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Nenhuma manutenção encontrada.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 8.dp)
-            ) {
-                items(historico) { manutencao ->
-                    ManutencaoCard(manutencao = manutencao, onNavigateToDetail = onNavigateToDetail)
-                }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(historico) { manutencao ->
+                ManutencaoCard(manutencao = manutencao, mainNavController = mainNavController)
             }
         }
     }
@@ -85,16 +60,15 @@ fun HistoricoScreen(
 @Composable
 private fun ManutencaoCard(
     manutencao: Manutencao,
-    onNavigateToDetail: (manutencaoId: String) -> Unit
+    mainNavController: NavController
 ) {
-    // O ID nunca deve ser nulo se veio do Firestore
     val manutencaoId = manutencao.id ?: return
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onNavigateToDetail(manutencaoId) },
+            .clickable { mainNavController.navigate("detalhes/$manutencaoId") },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -109,7 +83,6 @@ private fun ManutencaoCard(
                 text = "Técnico: ${manutencao.tecnico}",
                 style = MaterialTheme.typography.bodyMedium
             )
-            // Formata a data para um formato legível
             manutencao.data?.let {
                 val formato = SimpleDateFormat("dd/MM/yyyy 'às' HH:mm", Locale.getDefault())
                 Text(

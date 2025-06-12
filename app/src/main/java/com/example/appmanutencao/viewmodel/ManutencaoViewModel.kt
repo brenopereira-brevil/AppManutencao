@@ -1,6 +1,7 @@
 package com.example.appmanutencao.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.example.appmanutencao.data.Equipamento
 //import com.example.appmanutencao.data.Documento
 import com.example.appmanutencao.model.Documento
 import com.example.appmanutencao.model.Manutencao // Importe o modelo atualizado
@@ -27,6 +28,10 @@ class ManutencaoViewModel : ViewModel() {
 
     private val _documentosState = MutableStateFlow<List<Documento>>(emptyList())
     val documentosState = _documentosState.asStateFlow()
+
+    // StateFlow para expor os dados do equipamento para a UI.
+    private val _equipamentoState = MutableStateFlow<Equipamento?>(null)
+    val equipamentoState = _equipamentoState.asStateFlow()
 
     /**
      * Inicia um "ouvinte" em tempo real para o histórico de manutenções
@@ -172,6 +177,27 @@ class ManutencaoViewModel : ViewModel() {
                 if (snapshot != null) {
                     _documentosState.value = snapshot.toObjects(Documento::class.java)
                 }
+            }
+    }
+
+    fun carregarDadosEquipamento(numeroSerie: String) {
+        if (numeroSerie.isBlank()) return
+
+        db.collection("equipamentos")
+            .document(numeroSerie)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    // Converte o documento do Firestore para nosso objeto Equipamento
+                    _equipamentoState.value = document.toObject(Equipamento::class.java)
+                } else {
+                    // Documento não encontrado
+                    _equipamentoState.value = null
+                }
+            }
+            .addOnFailureListener {
+                // Tratar o erro
+                _equipamentoState.value = null
             }
     }
 

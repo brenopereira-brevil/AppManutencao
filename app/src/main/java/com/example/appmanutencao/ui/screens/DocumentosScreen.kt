@@ -6,85 +6,71 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.appmanutencao.model.Documento
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+// A assinatura da função foi simplificada
 @Composable
 fun DocumentosScreen(
     viewModel: ManutencaoViewModel,
     authViewModel: AuthViewModel,
-    onNavigateBack: () -> Unit,
-    onNavigateToPdf: (pdfUrl: String) -> Unit
+    mainNavController: NavController // Recebe o NavController principal
 ) {
     val documentos by viewModel.documentosState.collectAsState()
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        LaunchedEffect(numeroSerie) {
-            numeroSerie?.let { ns ->
-                if (ns.isNotBlank()) {
-                    viewModel.carregarDocumentos(ns)
-                }
+    LaunchedEffect(numeroSerie) {
+        numeroSerie?.let { ns ->
+            if (ns.isNotBlank()) {
+                viewModel.carregarDocumentos(ns)
             }
         }
+    }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Documentos do Equipamento") },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                        }
-                    }
+    // A tela agora renderiza seu conteúdo diretamente, sem Scaffold
+    if (documentos.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Nenhum documento encontrado.")
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(documentos) { documento ->
+                DocumentoItem(
+                    documento = documento,
+                    // Usa o NavController principal para navegar para o PDF
+                    onClick = { mainNavController.navigate("pdfViewer/${Uri.encode(documento.url)}") }
                 )
-            }
-        ) { paddingValues ->
-            if (documentos.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Nenhum documento encontrado.")
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(documentos) { documento ->
-                        DocumentoItem(documento = documento, onNavigateToPdf = onNavigateToPdf)
-                    }
-                }
             }
         }
     }
 }
 
 @Composable
-fun DocumentoItem(documento: Documento, onNavigateToPdf: (pdfUrl: String) -> Unit) {
+fun DocumentoItem(documento: Documento, onClick: () -> Unit) {
     if (documento.url.isBlank()) return
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onNavigateToPdf(documento.url) },
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -92,7 +78,7 @@ fun DocumentoItem(documento: Documento, onNavigateToPdf: (pdfUrl: String) -> Uni
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.Description, contentDescription = "Documento", tint = MaterialTheme.colorScheme.primary)
             Text(documento.descricao, style = MaterialTheme.typography.bodyLarge)
         }
     }
