@@ -2,14 +2,36 @@ package com.example.appmanutencao.ui.screens
 
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.ViewInAr
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,11 +58,9 @@ fun HomeScreen(
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
     val equipamento by manutencaoViewModel.equipamentoState.collectAsState()
 
-    // --- LÓGICA DO MODELO 3D (REINTEGRADA PARA FUNCIONAR AQUI) ---
     val context = LocalContext.current
     val navigationState3D by manutencaoViewModel.navigateTo3D.collectAsState()
 
-    // Carrega os dados do equipamento quando a tela é aberta
     LaunchedEffect(numeroSerie) {
         numeroSerie?.let { ns ->
             if (ns.isNotBlank()) {
@@ -49,11 +69,9 @@ fun HomeScreen(
         }
     }
 
-    // Observa o resultado da busca pela URL 3D e navega quando bem-sucedido
     LaunchedEffect(navigationState3D) {
         navigationState3D?.let { result ->
             result.onSuccess { url ->
-                // Usa o NavController principal para abrir a tela 3D por cima de tudo
                 navController.navigate("model3D/${Uri.encode(url)}")
                 manutencaoViewModel.onNavegacao3DCompleta()
             }
@@ -79,7 +97,6 @@ fun HomeScreen(
                 }
             } else {
                 HeaderInfo(equipamento!!)
-                // Passamos o ViewModel e o numeroSerie para as ações de navegação
                 NavigationActions(
                     navController = navController,
                     manutencaoViewModel = manutencaoViewModel,
@@ -145,8 +162,8 @@ fun HeaderInfo(equipamento: Equipamento) {
 @Composable
 fun NavigationActions(
     navController: NavController,
-    manutencaoViewModel: ManutencaoViewModel, // Parâmetro adicionado
-    numeroSerie: String? // Parâmetro adicionado
+    manutencaoViewModel: ManutencaoViewModel,
+    numeroSerie: String?
 ) {
     Column(
         modifier = Modifier
@@ -154,11 +171,8 @@ fun NavigationActions(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        NavigationButton(
-            text = "Cadastrar Manutenção",
-            icon = Icons.Default.EditNote,
-            onClick = { navController.navigate("cadastro") }
-        )
+        // --- BOTÃO DE CADASTRAR MANUTENÇÃO REMOVIDO DAQUI ---
+
         NavigationButton(
             text = "Histórico",
             icon = Icons.Default.History,
@@ -172,7 +186,6 @@ fun NavigationActions(
         NavigationButton(
             text = "Modelo 3D",
             icon = Icons.Default.ViewInAr,
-            // Ação do botão 3D corrigida para chamar o ViewModel
             onClick = {
                 numeroSerie?.let { ns ->
                     manutencaoViewModel.onBotao3dClicado(ns)

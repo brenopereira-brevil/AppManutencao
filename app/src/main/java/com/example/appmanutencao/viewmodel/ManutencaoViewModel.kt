@@ -43,7 +43,7 @@ class ManutencaoViewModel : ViewModel() {
         val historicoRef = db.collection("equipamentos")
             .document(numeroSerie)
             .collection("historico_manutencoes")
-            .orderBy("data", Query.Direction.DESCENDING) // Mais novos primeiro
+            .orderBy("data", Query.Direction.DESCENDING) // Mais novas primeiro
 
         historicoRef.addSnapshotListener { snapshot, error ->
             if (error != null) {

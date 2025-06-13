@@ -10,7 +10,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.appmanutencao.data.BottomNavItem
-import com.example.appmanutencao.ui.screens.*
+import com.example.appmanutencao.ui.screens.CadastroScreen
+import com.example.appmanutencao.ui.screens.DetailScreen
+import com.example.appmanutencao.ui.screens.HomeScreen
+import com.example.appmanutencao.ui.screens.LoginScreen
+import com.example.appmanutencao.ui.screens.MainScreen
+import com.example.appmanutencao.ui.screens.Model3DViewerScreen
+import com.example.appmanutencao.ui.screens.PdfViewerScreen
 import com.example.appmanutencao.ui.theme.AppManutencaoTheme
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel

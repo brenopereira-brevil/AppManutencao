@@ -1,14 +1,19 @@
 package com.example.appmanutencao.ui.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done // Ícone para "Salvar"
-import androidx.compose.material.icons.filled.Edit // Ícone para "Editar"
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -19,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.example.appmanutencao.viewmodel.AuthViewModel
 import com.example.appmanutencao.viewmodel.ManutencaoViewModel
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,10 +38,7 @@ fun DetailScreen(
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
     val manutencao by viewModel.manutencaoSelecionada.collectAsState()
 
-
-    // Estado para controlar se estamos em modo de edição. Inicia como 'false'.
     var inEditMode by remember { mutableStateOf(false) }
-
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(numeroSerie, manutencaoId) {
@@ -50,8 +52,6 @@ fun DetailScreen(
     var solucao by remember { mutableStateOf("") }
     var tecnico by remember { mutableStateOf("") }
 
-    // 'LaunchedEffect' para preencher os campos de texto quando os dados chegam
-    // ou quando o modo de edição é cancelado, para reverter quaisquer mudanças não salvas.
     LaunchedEffect(manutencao, inEditMode) {
         manutencao?.let {
             if (!inEditMode) {
@@ -63,8 +63,6 @@ fun DetailScreen(
         }
     }
 
-    // --- LÓGICA DE SALVAR EXTRAÍDA ---
-    // Esta função pode ser chamada tanto pelo ícone 'Done' quanto por um botão.
     val onSave = {
         val ns = numeroSerie ?: ""
         val manutencaoAtualizada = manutencao!!.copy(
@@ -76,7 +74,8 @@ fun DetailScreen(
         viewModel.salvarManutencao(ns, manutencaoAtualizada) { sucesso ->
             if (sucesso) {
                 Toast.makeText(context, "Alterações salvas!", Toast.LENGTH_SHORT).show()
-                inEditMode = false // Sai do modo de edição
+                inEditMode = false
+                onNavigateBack()
             } else {
                 Toast.makeText(context, "Erro ao salvar.", Toast.LENGTH_SHORT).show()
             }
@@ -90,7 +89,7 @@ fun DetailScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         if (inEditMode) {
-                            inEditMode = false // Cancela a edição
+                            inEditMode = false
                         } else {
                             onNavigateBack()
                         }
@@ -99,12 +98,11 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    // --- NOVA FUNCIONALIDADE: Ícone de Editar/Salvar ---
                     IconButton(onClick = {
                         if (inEditMode) {
-                            onSave() // Salva as alterações
+                            onSave()
                         } else {
-                            inEditMode = true // Entra no modo de edição
+                            inEditMode = true
                         }
                     }) {
                         Icon(
@@ -112,7 +110,6 @@ fun DetailScreen(
                             contentDescription = if (inEditMode) "Salvar" else "Editar"
                         )
                     }
-
                     IconButton(onClick = { showConfirmDialog = true }) {
                         Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
                     }
@@ -131,17 +128,14 @@ fun DetailScreen(
                     .padding(paddingValues)
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(24.dp) // Aumentei o espaçamento
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // --- NOVA FUNCIONALIDADE: Layout condicional ---
                 if (inEditMode) {
-                    // --- MODO DE EDIÇÃO ---
                     OutlinedTextField(value = descricao, onValueChange = { descricao = it }, label = { Text("Descrição") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = duracao, onValueChange = { duracao = it }, label = { Text("Duração") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = solucao, onValueChange = { solucao = it }, label = { Text("Solução") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = tecnico, onValueChange = { tecnico = it }, label = { Text("Técnico") }, modifier = Modifier.fillMaxWidth())
                 } else {
-                    // --- MODO DE VISUALIZAÇÃO ---
                     ReadOnlyField(label = "Descrição do Problema", value = descricao)
                     ReadOnlyField(label = "Solução Aplicada", value = solucao)
                     ReadOnlyField(label = "Técnico Responsável", value = tecnico)
@@ -155,15 +149,46 @@ fun DetailScreen(
         }
     }
 
-    // O diálogo de confirmação permanece igual
+    // --- CÓDIGO DO DIÁLOGO DE EXCLUSÃO CORRIGIDO E IMPLEMENTADO ---
     if (showConfirmDialog) {
-        // ... (código do AlertDialog de exclusão)
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Confirmar Exclusão") },
+            text = { Text("Você tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val ns = numeroSerie
+                        if (ns.isNullOrBlank()) {
+                            Toast.makeText(context, "Erro: Não foi possível identificar o equipamento.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+
+                        // AQUI ESTÁ A CHAMADA QUE FALTAVA
+                        viewModel.excluirManutencao(ns, manutencaoId) { sucesso ->
+                            if (sucesso) {
+                                Toast.makeText(context, "Registro excluído.", Toast.LENGTH_SHORT).show()
+                                onNavigateBack() // Volta para a tela de histórico
+                            } else {
+                                Toast.makeText(context, "Erro ao excluir.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        showConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
-/**
- * Um Composable reutilizável para mostrar um campo de dado em modo de leitura.
- */
 @Composable
 private fun ReadOnlyField(label: String, value: String) {
     Column {

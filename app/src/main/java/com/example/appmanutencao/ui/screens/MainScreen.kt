@@ -4,9 +4,15 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,13 +60,6 @@ fun MainScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Voltar para o Painel")
                     }
                 },
-                actions = {
-                    if (currentRoute == BottomNavItem.Historico.route) {
-                        IconButton(onClick = { mainNavController.navigate("cadastro") }) {
-                            Icon(Icons.Default.Add, "Adicionar Manutenção")
-                        }
-                    }
-                }
             )
         },
         bottomBar = {
@@ -109,9 +108,9 @@ fun AppBottomNavigationBar(
 ) {
     // Este código não foi alterado.
     val items = listOf(
+        BottomNavItem.Modelo3D,
         BottomNavItem.Historico,
         BottomNavItem.Documentos,
-        BottomNavItem.Modelo3D,
         BottomNavItem.Clp,
     )
     val numeroSerie by authViewModel.numeroSerie.observeAsState()
